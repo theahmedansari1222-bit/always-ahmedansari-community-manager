@@ -1,0 +1,120 @@
+name: Build Zhentropic
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      build_ios:
+        description: "Also build iOS (unsigned, uses a macOS runner)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write # needed to attach the APK to a GitHub Release
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Public client values (safe to commit); a repository secret with the same name overrides them.
+  SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://xqdmduepioiympjbzobp.supabase.co' }}
+  SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY || 'sb_publishable_PZCnEgOZIm7H_8lOtzvT7A_2RQ0nhEQ' }}
+  DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+
+jobs:
+  android:
+    name: Android APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check secrets
+        run: |
+          for v in DEEPSEEK_API_KEY; do
+            if [ -z "${!v}" ]; then
+              echo "::error::Missing repository secret $v (Settings > Secrets and variables > Actions)"
+              exit 1
+            fi
+          done
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Generate and patch platform folders
+        run: bash tool/setup_platforms.sh
+
+      - run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: Build release APK
+        run: |
+          flutter build apk --release \
+            --build-number=${{ github.run_number }} \
+            --dart-define=SUPABASE_URL="$SUPABASE_URL" \
+            --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
+            --dart-define=DEEPSEEK_API_KEY="$DEEPSEEK_API_KEY"
+
+      - name: Name the APK
+        run: cp build/app/outputs/flutter-apk/app-release.apk "Zhentropic-${{ github.ref_name }}-${{ github.run_number }}.apk"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zhentropic-apk
+          path: Zhentropic-*.apk
+          retention-days: 30
+
+      - name: Publish GitHub Release (tags like v1.0.0)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: Zhentropic-*.apk
+          generate_release_notes: true
+
+  ios:
+    name: iOS (unsigned build check)
+    if: github.event_name == 'workflow_dispatch' && inputs.build_ios
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Generate and patch platform folders
+        run: bash tool/setup_platforms.sh
+
+      - run: flutter pub get
+
+      - name: Build iOS without code signing
+        run: |
+          flutter build ios --release --no-codesign \
+            --build-number=${{ github.run_number }} \
+            --dart-define=SUPABASE_URL="$SUPABASE_URL" \
+            --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
+            --dart-define=DEEPSEEK_API_KEY="$DEEPSEEK_API_KEY"
+
+      - name: Zip the app
+        run: cd build/ios/iphoneos && zip -qr "$GITHUB_WORKSPACE/Zhentropic-ios-unsigned.zip" Runner.app
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zhentropic-ios-unsigned
+          path: Zhentropic-ios-unsigned.zip
+          retention-days: 14
