@@ -21,3 +21,4 @@ android/gradlew.bat
 ios/Pods/
 ios/.symlinks/
 ios/Flutter/ephemeral/
+.harness/
