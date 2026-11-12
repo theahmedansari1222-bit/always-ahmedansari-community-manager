@@ -20,9 +20,11 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # Public client values (safe to commit); a repository secret with the same name overrides them.
-  SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://xqdmduepioiympjbzobp.supabase.co' }}
-  SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY || 'sb_publishable_PZCnEgOZIm7H_8lOtzvT7A_2RQ0nhEQ' }}
+  # These values must be supplied via repository secrets.
+  # No hardcoded fallbacks are included so the build cannot accidentally
+  # connect to an unknown or legacy Supabase project.
+  SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+  SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
   DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
 
 jobs:
@@ -35,7 +37,7 @@ jobs:
 
       - name: Check secrets
         run: |
-          for v in DEEPSEEK_API_KEY; do
+          for v in SUPABASE_URL SUPABASE_PUBLISHABLE_KEY DEEPSEEK_API_KEY; do
             if [ -z "${!v}" ]; then
               echo "::error::Missing repository secret $v (Settings > Secrets and variables > Actions)"
               exit 1
@@ -65,7 +67,7 @@ jobs:
           flutter build apk --release \
             --build-number=${{ github.run_number }} \
             --dart-define=SUPABASE_URL="$SUPABASE_URL" \
-            --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
+            --dart-define=SUPABASE_PUBLISHABLE_KEY="$SUPABASE_PUBLISHABLE_KEY" \
             --dart-define=DEEPSEEK_API_KEY="$DEEPSEEK_API_KEY"
 
       - name: Name the APK
@@ -107,7 +109,7 @@ jobs:
           flutter build ios --release --no-codesign \
             --build-number=${{ github.run_number }} \
             --dart-define=SUPABASE_URL="$SUPABASE_URL" \
-            --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
+            --dart-define=SUPABASE_PUBLISHABLE_KEY="$SUPABASE_PUBLISHABLE_KEY" \
             --dart-define=DEEPSEEK_API_KEY="$DEEPSEEK_API_KEY"
 
       - name: Zip the app

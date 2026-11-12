@@ -1,0 +1,4 @@
+[functions.classify-and-reply]
+# The function validates user JWTs itself and also accepts a high-entropy server-only
+# processing secret for webhook-triggered classification. Do not remove its auth checks.
+verify_jwt = false

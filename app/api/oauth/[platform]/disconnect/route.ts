@@ -1,0 +1,4 @@
+import { createClient } from "@/lib/supabase/server";
+import { deleteCredential } from "@/lib/credentials";
+import { jsonError } from "@/lib/http";
+export async function POST(_request:Request,ctx:{params:Promise<{platform:string}>}){const {platform}=await ctx.params;if(platform!=="instagram"&&platform!=="threads")return jsonError("Unknown platform");const supabase=await createClient();const {data:{user}}=await supabase.auth.getUser();if(!user)return jsonError("Unauthorized",401);const {data:workspace}=await supabase.from("workspaces").select("id").eq("owner_id",user.id).single();if(!workspace)return jsonError("Workspace not found",404);try{await deleteCredential(user.id,workspace.id,platform);return Response.json({message:"Account disconnected."});}catch(e){return jsonError(e instanceof Error?e.message:"Disconnect failed",500);}}

@@ -10,8 +10,13 @@
 //   Storage bucket: zhentropic-files (private, files under <user_id>/...)
 //   Row Level Security: every table/bucket is limited to auth.uid().
 //
-// Google sign-in: enable the Google provider in Supabase > Authentication and
-// add the redirect URL  io.supabase.zhentropic://login-callback/
+// Configuration:
+//   The Supabase URL and publishable key are supplied via environment
+//   variables (SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY) through
+//   lib/constants.dart. They are validated before the app starts.
+//
+// Google sign-in: enable the Google provider in your Supabase project > Authentication
+// and add the redirect URL  io.supabase.zhentropic://login-callback/
 // ---------------------------------------------------------------------------
 import 'dart:io';
 

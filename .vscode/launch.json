@@ -1,0 +1,16 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Flutter (configured)",
+      "type": "dart",
+      "request": "launch",
+      "program": "lib/main.dart",
+      "args": [
+        "--dart-define=SUPABASE_URL=https://your-project.supabase.co",
+        "--dart-define=SUPABASE_PUBLISHABLE_KEY=your-publishable-key-here",
+        "--dart-define=DEEPSEEK_API_KEY=your-deepseek-api-key-here"
+      ]
+    }
+  ]
+}
